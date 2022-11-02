@@ -5,21 +5,21 @@ const { Schema } = mongoose;
 const cardSchema = new Schema({
   name: {
     type: String,
-    require: true,
+    required: true,
     minLength: 2,
     maxLength: 30,
   },
   link: {
     type: String,
-    require: true,
+    required: true,
   },
   owner: {
     type: Object,
-    require: true,
+    required: true,
   },
   likes: {
     type: Object,
-    require: true,
+    required: true,
   },
   createdAt: {
     type: Date,

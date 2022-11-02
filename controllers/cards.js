@@ -32,6 +32,9 @@ const deleteCard = (req, res) => {
       if (err.message === 'NotFound') {
         return res.status(404).send({ message: 'Карточка не найдена', err });
       }
+      if (err instanceof mongoose.Error.CastError) {
+        return res.status(400).send({ message: 'не корректный id', err });
+      }
       return res.status(500).send({ message: 'На сервере произошла ошибка', err });
     });
 };
