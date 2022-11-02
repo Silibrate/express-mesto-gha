@@ -27,7 +27,7 @@ const createCard = (req, res) => {
 
 const deleteCard = (req, res) => {
   cards.findByIdAndRemove(req.params.cardId).orFail(new Error('NotFound'))
-    .then((card) => res.send({ data: card }))
+    .then(() => res.status(200).send([]))
     .catch((err) => {
       if (err.message === 'NotFound') {
         return res.status(404).send({ message: 'Карточка не найдена', err });

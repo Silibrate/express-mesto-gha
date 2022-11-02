@@ -30,10 +30,10 @@ const getUsersById = (req, res) => {
     .then((user) => res.send(user))
     .catch((err) => {
       if (err.message === 'NotFound') {
-        return res.status(404).send('Пользователь не найден');
+        return res.status(404).send({ message: 'Пользователь не найден' });
       }
       if (err instanceof mongoose.Error.CastError) {
-        return res.status(400).send({ message: 'Не коректный id', err });
+        return res.status(400).send({ message: 'Не коректный id' });
       }
       return res.status(500).send({ message: 'На сервере произошла ошибка' });
     });
@@ -53,6 +53,9 @@ const updateUser = async (req, res) => {
     );
     res.send(newUser);
   } catch (err) {
+    if (err instanceof mongoose.Error.ValidationError || err instanceof mongoose.Error.CastError) {
+      return res.status(400).send({ message: 'Ошибка валидации. Переданные данные не корректны' });
+    }
     return res.status(500).send({ message: 'На сервере произошла ошибка' });
   }
 };
