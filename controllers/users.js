@@ -10,9 +10,9 @@ const createUser = (req, res) => {
     })
     .catch((err) => {
       if (err instanceof mongoose.Error.ValidationError) {
-        return res.status(400).send({ message: 'Ошибка валидации', err });
+        return res.status(400).send({ message: 'Ошибка валидации' });
       }
-      return res.status(500).send({ message: 'На сервере произошла ошибка', err });
+      return res.status(500).send({ message: 'На сервере произошла ошибка' });
     });
 };
 
@@ -75,6 +75,10 @@ const updateAvatar = async (req, res) => {
 
     res.send(newAvatar);
   } catch (err) {
+    // не могу представить какие данные тут могут быть не корректны если в схеме нет ограничений
+    if (err instanceof mongoose.Error.ValidationError || err instanceof mongoose.Error.CastError) {
+      res.status(400).send({ message: 'Ошибка валидации. Переданные данные не корректны' });
+    }
     return res.status(500).send({ message: 'На сервере произошла ошибка' });
   }
 };

@@ -19,9 +19,9 @@ const createCard = (req, res) => {
     })
     .catch((err) => {
       if (err instanceof mongoose.Error.ValidationError) {
-        return res.status(400).send({ message: 'Ошибка валидации', err });
+        return res.status(400).send({ message: 'Ошибка валидации' });
       }
-      return res.status(500).send({ message: 'Ошибка сервера', err });
+      return res.status(500).send({ message: 'Ошибка сервера' });
     });
 };
 
@@ -30,12 +30,12 @@ const deleteCard = (req, res) => {
     .then(() => res.status(200).send([]))
     .catch((err) => {
       if (err.message === 'NotFound') {
-        return res.status(404).send({ message: 'Карточка не найдена', err });
+        return res.status(404).send({ message: 'Карточка не найдена' });
       }
       if (err instanceof mongoose.Error.CastError) {
-        return res.status(400).send({ message: 'не корректный id', err });
+        return res.status(400).send({ message: 'не корректный id' });
       }
-      return res.status(500).send({ message: 'На сервере произошла ошибка', err });
+      return res.status(500).send({ message: 'На сервере произошла ошибка' });
     });
 };
 
@@ -54,9 +54,9 @@ const likeCard = (req, res) => {
     .catch((err) => {
       // eslint-disable-next-line max-len
       if (err instanceof mongoose.Error.CastError || err instanceof mongoose.Error.ValidationError) {
-        return res.status(400).send({ message: 'Не корректные данные', err });
+        return res.status(400).send({ message: 'Не корректные данные' });
       }
-      return res.status(500).send({ message: 'На сервере произошла ошибка', err });
+      return res.status(500).send({ message: 'На сервере произошла ошибка' });
     });
 };
 
@@ -75,9 +75,9 @@ const dislikeCard = (req, res) => {
     .catch((err) => {
       // eslint-disable-next-line max-len
       if (err instanceof mongoose.Error.CastError || err instanceof mongoose.Error.ValidationError) {
-        return res.status(400).send({ message: 'Не корректные данные', err });
+        return res.status(400).send({ message: 'Не корректные данные' });
       }
-      return res.status(500).send({ message: 'На сервере произошла ошибка', err });
+      return res.status(500).send({ message: 'На сервере произошла ошибка' });
     });
 };
 
