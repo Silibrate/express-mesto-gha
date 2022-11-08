@@ -1,45 +1,92 @@
 /* eslint-disable consistent-return */
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 const User = require('../models/user');
 
-const createUser = (req, res) => {
-  const { name, about, avatar } = req.body;
-  User.create({ name, about, avatar })
+const createUser = (req, res, next) => {
+  const {
+    name,
+    about,
+    avatar,
+    email,
+    password,
+  } = req.body;
+
+  bcrypt.hash(password, 10)
+    .then((hash) => User.create({
+      name,
+      about,
+      avatar,
+      email,
+      password: hash,
+    }))
     .then((user) => {
       res.status(201).send({ data: user });
     })
-    .catch((err) => {
-      if (err instanceof mongoose.Error.ValidationError) {
-        return res.status(400).send({ message: 'Ошибка валидации' });
+    .catch((e) => {
+      if (e.code === 11000) {
+        const err = new Error('Пользователь с таким email уже существует');
+        err.statusCode = 409;
+        return next(err);
       }
-      return res.status(500).send({ message: 'На сервере произошла ошибка' });
+      if (e instanceof mongoose.Error.ValidationError) {
+        const err = new Error('Ошибка валидации');
+        err.statusCode = 400;
+        return next(err);
+      }
+      const err = new Error('На сервере произошла ошибка');
+      err.statusCode = 500;
+      return next(err);
     });
 };
 
-const getUsers = async (req, res) => {
+const getUsers = async (req, res, next) => {
   try {
     const users = await User.find({});
     res.send(users);
-  } catch (err) {
-    return res.status(500).send({ message: 'На сервере произошла ошибка' });
+  } catch (e) {
+    const err = new Error('На сервере произошла ошибка');
+    err.statusCode = 500;
+    return next(err);
   }
 };
-
-const getUsersById = (req, res) => {
-  User.findById(req.params.userId).orFail(new Error('NotFound'))
+const getUsersMe = (req, res, next) => {
+  User.findOne({ name: req.user.name }).orFail(new Error('NotFound'))
     .then((user) => res.send(user))
-    .catch((err) => {
-      if (err.message === 'NotFound') {
-        return res.status(404).send({ message: 'Пользователь не найден' });
+    .catch((e) => {
+      if (e.message === 'NotFound') {
+        const err = new Error('Пользователь не найден');
+        err.statusCode = 404;
+        return next(err);
       }
-      if (err instanceof mongoose.Error.CastError) {
-        return res.status(400).send({ message: 'Не коректный id' });
-      }
-      return res.status(500).send({ message: 'На сервере произошла ошибка' });
+      const err = new Error('На сервере произошла ошибка');
+      err.statusCode = 500;
+      return next(err);
     });
 };
 
-const updateUser = async (req, res) => {
+const getUsersById = (req, res, next) => {
+  User.findById(req.params.userId).orFail(new Error('NotFound'))
+    .then((user) => res.send(user))
+    .catch((e) => {
+      if (e.message === 'NotFound') {
+        const err = new Error('Пользователь не найден');
+        err.statusCode = 401;
+        return next(err);
+      }
+      if (e instanceof mongoose.Error.CastError) {
+        const err = new Error('Не коректный id');
+        err.statusCode = 400;
+        return next(err);
+      }
+      const err = new Error('На сервере произошла ошибка');
+      err.statusCode = 500;
+      return next(err);
+    });
+};
+
+const updateUser = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id);
     if (!user) {
@@ -52,15 +99,19 @@ const updateUser = async (req, res) => {
       { new: true, runValidators: true },
     );
     res.send(newUser);
-  } catch (err) {
-    if (err instanceof mongoose.Error.ValidationError || err instanceof mongoose.Error.CastError) {
-      return res.status(400).send({ message: 'Ошибка валидации. Переданные данные не корректны' });
+  } catch (e) {
+    if (e instanceof mongoose.Error.ValidationError || e instanceof mongoose.Error.CastError) {
+      const err = new Error('Ошибка валидации. Переданные данные не корректны');
+      err.statusCode = 400;
+      return next(err);
     }
-    return res.status(500).send({ message: 'На сервере произошла ошибка' });
+    const err = new Error('На сервере произошла ошибка');
+    err.statusCode = 500;
+    return next(err);
   }
 };
 
-const updateAvatar = async (req, res) => {
+const updateAvatar = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id);
     if (!user) {
@@ -74,13 +125,46 @@ const updateAvatar = async (req, res) => {
     );
 
     res.send(newAvatar);
-  } catch (err) {
-    // не могу представить какие данные тут могут быть не корректны если в схеме нет ограничений
-    if (err instanceof mongoose.Error.ValidationError || err instanceof mongoose.Error.CastError) {
-      res.status(400).send({ message: 'Ошибка валидации. Переданные данные не корректны' });
+  } catch (e) {
+    if (e instanceof mongoose.Error.ValidationError || e instanceof mongoose.Error.CastError) {
+      const err = new Error('Ошибка валидации. Переданные данные не корректны');
+      err.statusCode = 400;
+      return next(err);
     }
-    return res.status(500).send({ message: 'На сервере произошла ошибка' });
+    const err = new Error('На сервере произошла ошибка');
+    err.statusCode = 500;
+    return next(err);
   }
+};
+
+const login = (req, res, next) => {
+  const {
+    email,
+    password,
+  } = req.body;
+
+  User.findOne({ email }).select('+password')
+    .then((user) => {
+      if (!user) {
+        return Promise.reject(new Error('Неправильные почта или пароль'));
+      }
+      return bcrypt.compare(password, user.password)
+        .then((matched) => {
+          if (!matched) {
+            return Promise.reject(new Error('Неправильные почта или пароль'));
+          }
+          const token = jwt.sign({ _id: user._id }, 'some-secret-key', { expiresIn: '7d' });
+          if (!token) {
+            return Promise.reject(new Error('Ошибка токена'));
+          }
+          return res.send({ token });
+        });
+    })
+    .catch((e) => {
+      const err = new Error(`${e.message}`);
+      err.statusCode = 401;
+      return next(err);
+    });
 };
 
 module.exports = {
@@ -89,4 +173,6 @@ module.exports = {
   getUsersById,
   updateUser,
   updateAvatar,
+  login,
+  getUsersMe,
 };

@@ -1,28 +1,50 @@
+/* eslint-disable consistent-return */
 const express = require('express');
 const mongoose = require('mongoose');
+const { Joi, celebrate, errors } = require('celebrate');
 const cardsRouter = require('./routes/cardsRouter');
 const usersRouter = require('./routes/usersRouter');
+const { login, createUser } = require('./controllers/users');
+const auth = require('./middlewares/auth');
+
+mongoose.set('toObject', { useProjection: true });
+mongoose.set('toJSON', { useProjection: true });
 
 const app = express();
 const { PORT = 3000, MONGO_URL = 'mongodb://localhost:27017/mestodb' } = process.env;
-
-app.use((req, res, next) => {
-  req.user = {
-    _id: '635ed67d756a9dbd401e8a88',
-  };
-
-  next();
-});
 
 mongoose.connect(MONGO_URL);
 
 app.use(express.json());
 
+app.post('/signin', celebrate({
+  body: Joi.object().keys({
+    password: Joi.string().required().min(8),
+    email: Joi.string().required().email(),
+  }),
+}), login);
+
+app.post('/signup', celebrate({
+  body: Joi.object().keys({
+    email: Joi.string().required().email(),
+    password: Joi.string().required().min(8),
+  }),
+}), createUser);
+
+app.use(auth);
 app.use(usersRouter);
 app.use(cardsRouter);
 
 app.use((req, res) => {
   res.status(404).send({ message: 'Страница не найдена' });
+});
+app.use(errors());
+app.use((err, req, res, next) => {
+  if (!err.statusCode) {
+    return res.status(500).send({ message: 'На сервере произошла ошибка' });
+  }
+  res.status(err.statusCode).send({ message: err.message });
+  next();
 });
 
 app.listen(PORT);
