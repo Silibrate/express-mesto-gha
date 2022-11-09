@@ -52,8 +52,8 @@ const getUsers = async (req, res, next) => {
   }
 };
 const getUsersMe = (req, res, next) => {
-  User.findOne({ name: req.user.name }).orFail(new Error('NotFound'))
-    .then((user) => res.send(user))
+  User.findById(req.user._id).orFail(new Error('NotFound'))
+    .then((user) => res.send({ data: user }))
     .catch((e) => {
       if (e.message === 'NotFound') {
         const err = new Error('Пользователь не найден');
@@ -157,7 +157,7 @@ const login = (req, res, next) => {
           if (!token) {
             return Promise.reject(new Error('Ошибка токена'));
           }
-          return res.send({ token });
+          return res.status(200).send({ token });
         });
     })
     .catch((e) => {

@@ -42,7 +42,7 @@ const deleteCard = (req, res, next) => {
       }
       if (e instanceof mongoose.Error.CastError) {
         const err = new Error('не корректный id');
-        err.statusCode = 400;
+        err.statusCode = 404;
         return next(err);
       }
       const err = new Error('На сервере произошла ошибка');
