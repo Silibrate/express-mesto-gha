@@ -72,7 +72,7 @@ const getUsersById = (req, res, next) => {
     .catch((e) => {
       if (e.message === 'NotFound') {
         const err = new Error('Пользователь не найден');
-        err.statusCode = 401;
+        err.statusCode = 404;
         return next(err);
       }
       if (e instanceof mongoose.Error.CastError) {

@@ -32,10 +32,10 @@ app.post('/signup', celebrate({
   }),
 }), createUser);
 
+app.use(auth);
 app.use(usersRouter);
 app.use(cardsRouter);
-// тесты не проходились из за нужды авторизации и я убрал надобность авторизации
-app.use(auth);
+
 app.use((req, res) => {
   res.status(404).send({ message: 'Страница не найдена' });
 });
