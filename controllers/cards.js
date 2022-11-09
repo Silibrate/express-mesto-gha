@@ -33,7 +33,14 @@ const createCard = (req, res, next) => {
 
 const deleteCard = (req, res, next) => {
   cards.findByIdAndRemove(req.params.cardId).orFail(new Error('NotFound'))
-    .then(() => res.status(200).send([]))
+    .then((card) => {
+      if (card.owner !== req.user._id) {
+        const err = new Error('Нельзя удалять чужие карточки');
+        err.statusCode = 403;
+        return next(err);
+      }
+      return res.status(200).send(req.user._id);
+    })
     .catch((e) => {
       if (e.message === 'NotFound') {
         const err = new Error('Карточка не найдена');
