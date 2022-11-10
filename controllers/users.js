@@ -4,6 +4,11 @@ const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 const User = require('../models/user');
 
+const BadRequestError = require('../errors/BadRequestError');
+const NotFoundError = require('../errors/NotFoundError');
+const ConflictError = require('../errors/ConflictError');
+const UnauthorizedError = require('../errors/UnauthorizedError');
+
 const createUser = (req, res, next) => {
   const {
     name,
@@ -26,18 +31,12 @@ const createUser = (req, res, next) => {
     })
     .catch((e) => {
       if (e.code === 11000) {
-        const err = new Error('Пользователь с таким email уже существует');
-        err.statusCode = 409;
-        return next(err);
+        return next(new ConflictError('Пользователь с таким email уже существует'));
       }
       if (e instanceof mongoose.Error.ValidationError) {
-        const err = new Error('Ошибка валидации');
-        err.statusCode = 400;
-        return next(err);
+        return next(new BadRequestError('Ошибка валидации'));
       }
-      const err = new Error('На сервере произошла ошибка');
-      err.statusCode = 500;
-      return next(err);
+      return next(e);
     });
 };
 
@@ -46,9 +45,7 @@ const getUsers = async (req, res, next) => {
     const users = await User.find({});
     res.send(users);
   } catch (e) {
-    const err = new Error('На сервере произошла ошибка');
-    err.statusCode = 500;
-    return next(err);
+    return next(e);
   }
 };
 const getUsersMe = (req, res, next) => {
@@ -56,33 +53,20 @@ const getUsersMe = (req, res, next) => {
     .then((user) => res.send({ data: user }))
     .catch((e) => {
       if (e.message === 'NotFound') {
-        const err = new Error('Пользователь не найден');
-        err.statusCode = 404;
-        return next(err);
+        return next(new NotFoundError('Пользователь не найден'));
       }
-      const err = new Error('На сервере произошла ошибка');
-      err.statusCode = 500;
-      return next(err);
+      return next(e);
     });
 };
 
 const getUsersById = (req, res, next) => {
-  User.findById(req.params.userId).orFail(new Error('NotFound'))
+  User.findById(req.params.userId).orFail(new NotFoundError('Пользователь не найден'))
     .then((user) => res.send(user))
     .catch((e) => {
-      if (e.message === 'NotFound') {
-        const err = new Error('Пользователь не найден');
-        err.statusCode = 404;
-        return next(err);
-      }
       if (e instanceof mongoose.Error.CastError) {
-        const err = new Error('Не коректный id');
-        err.statusCode = 400;
-        return next(err);
+        return next(new BadRequestError('Не коректный id'));
       }
-      const err = new Error('На сервере произошла ошибка');
-      err.statusCode = 500;
-      return next(err);
+      return next(e);
     });
 };
 
@@ -90,7 +74,7 @@ const updateUser = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id);
     if (!user) {
-      return res.status(404).send('Пользователь не найден');
+      throw new NotFoundError('Пользователь не найден');
     }
     const { name, about } = req.body;
     const newUser = await User.findByIdAndUpdate(
@@ -101,13 +85,9 @@ const updateUser = async (req, res, next) => {
     res.send(newUser);
   } catch (e) {
     if (e instanceof mongoose.Error.ValidationError || e instanceof mongoose.Error.CastError) {
-      const err = new Error('Ошибка валидации. Переданные данные не корректны');
-      err.statusCode = 400;
-      return next(err);
+      return next(new BadRequestError('Ошибка валидации. Переданные данные не корректны'));
     }
-    const err = new Error('На сервере произошла ошибка');
-    err.statusCode = 500;
-    return next(err);
+    return next(e);
   }
 };
 
@@ -115,7 +95,7 @@ const updateAvatar = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id);
     if (!user) {
-      return res.status(404).send('Пользователь не найден');
+      throw new NotFoundError('Пользователь не найден');
     }
     const { avatar } = req.body;
     const newAvatar = await User.findByIdAndUpdate(
@@ -127,13 +107,9 @@ const updateAvatar = async (req, res, next) => {
     res.send(newAvatar);
   } catch (e) {
     if (e instanceof mongoose.Error.ValidationError || e instanceof mongoose.Error.CastError) {
-      const err = new Error('Ошибка валидации. Переданные данные не корректны');
-      err.statusCode = 400;
-      return next(err);
+      return next(new BadRequestError('Ошибка валидации. Переданные данные не корректны'));
     }
-    const err = new Error('На сервере произошла ошибка');
-    err.statusCode = 500;
-    return next(err);
+    return next(e);
   }
 };
 
@@ -160,11 +136,7 @@ const login = (req, res, next) => {
           return res.status(200).send({ token });
         });
     })
-    .catch((e) => {
-      const err = new Error(`${e.message}`);
-      err.statusCode = 401;
-      return next(err);
-    });
+    .catch((e) => next(new UnauthorizedError(`${e.message}`)));
 };
 
 module.exports = {

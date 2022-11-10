@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 const cards = require('../models/card');
 
+const BadRequestError = require('../errors/BadRequestError');
+const NotFoundError = require('../errors/NotFoundError');
+const ForbiddenError = require('../errors/ForbiddenError');
+
 const getCards = async (req, res, next) => {
   try {
     const card = await cards.find({});
@@ -21,40 +25,25 @@ const createCard = (req, res, next) => {
     })
     .catch((e) => {
       if (e instanceof mongoose.Error.ValidationError) {
-        const err = new Error('Ошибка валидации');
-        err.statusCode = 400;
-        return next(err);
+        return next(new BadRequestError('Ошибка валидации'));
       }
-      const err = new Error('На сервере произошла ошибка');
-      err.statusCode = 500;
-      return next(err);
+      return next(e);
     });
 };
 
 const deleteCard = (req, res, next) => {
-  cards.findByIdAndRemove(req.params.cardId).orFail(new Error('NotFound'))
+  cards.findByIdAndRemove(req.params.cardId).orFail(new NotFoundError('Карточка не найдена'))
     .then((card) => {
       if (card.owner.toString() !== req.user._id) {
-        const err = new Error('Нельзя удалять чужие карточки');
-        err.statusCode = 403;
-        return next(err);
+        throw new ForbiddenError('Нельзя удалять чужие карточки');
       }
       return res.status(200).send([]);
     })
     .catch((e) => {
-      if (e.message === 'NotFound') {
-        const err = new Error('Карточка не найдена');
-        err.statusCode = 404;
-        return next(err);
-      }
       if (e instanceof mongoose.Error.CastError) {
-        const err = new Error('не корректный id');
-        err.statusCode = 404;
-        return next(err);
+        return next(new NotFoundError('не корректный id'));
       }
-      const err = new Error('На сервере произошла ошибка');
-      err.statusCode = 500;
-      return next(err);
+      return next(e);
     });
 };
 
@@ -66,20 +55,16 @@ const likeCard = (req, res, next) => {
   )
     .then((card) => {
       if (!card) {
-        return res.status(404).send({ message: 'Карточка не найдена' });
+        throw new NotFoundError('Карточка не найдена');
       }
       return res.send(card);
     })
     .catch((e) => {
       // eslint-disable-next-line max-len
       if (e instanceof mongoose.Error.CastError || e instanceof mongoose.Error.ValidationError) {
-        const err = new Error('Не корректные данные');
-        err.statusCode = 400;
-        return next(err);
+        return next(new BadRequestError('Не корректные данные'));
       }
-      const err = new Error('На сервере произошла ошибка');
-      err.statusCode = 500;
-      return next(err);
+      return next(e);
     });
 };
 
@@ -91,22 +76,16 @@ const dislikeCard = (req, res, next) => {
   )
     .then((card) => {
       if (!card) {
-        const err = new Error('Карточка не найдена');
-        err.statusCode = 404;
-        return next(err);
+        throw new NotFoundError('Карточка не найдена');
       }
       return res.send(card);
     })
     .catch((e) => {
       // eslint-disable-next-line max-len
       if (e instanceof mongoose.Error.CastError || e instanceof mongoose.Error.ValidationError) {
-        const err = new Error('Не корректные данные');
-        err.statusCode = 400;
-        return next(err);
+        return next(new BadRequestError('Не корректные данные'));
       }
-      const err = new Error('На сервере произошла ошибка');
-      err.statusCode = 500;
-      return next(err);
+      return next(e);
     });
 };
 

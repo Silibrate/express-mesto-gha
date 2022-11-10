@@ -17,7 +17,7 @@ app.use(express.json());
 
 app.post('/signin', celebrate({
   body: Joi.object().keys({
-    password: Joi.string().required().min(8),
+    password: Joi.string().required(),
     email: Joi.string().required().email(),
   }),
 }), login);
@@ -25,7 +25,7 @@ app.post('/signin', celebrate({
 app.post('/signup', celebrate({
   body: Joi.object().keys({
     email: Joi.string().required().email(),
-    password: Joi.string().required().min(8),
+    password: Joi.string().required(),
     name: Joi.string().min(2).max(30),
     about: Joi.string().min(2).max(30),
     avatar: Joi.string().pattern(url),
@@ -36,9 +36,12 @@ app.use(auth);
 app.use(usersRouter);
 app.use(cardsRouter);
 
-app.use((req, res) => {
-  res.status(404).send({ message: 'Страница не найдена' });
+app.use((req, res, next) => {
+  const err = new Error('Страница не найдена');
+  err.statusCode = 404;
+  return next(err);
 });
+
 app.use(errors());
 app.use((err, req, res, next) => {
   if (!err.statusCode) {
