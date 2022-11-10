@@ -31,17 +31,19 @@ const createCard = (req, res, next) => {
     });
 };
 
-const deleteCard = (req, res, next) => {
-  cards.findByIdAndRemove(req.params.cardId).orFail(new NotFoundError('Карточка не найдена'))
+const deleteCard = async (req, res, next) => {
+  cards.findById(req.params.cardId).orFail(new NotFoundError('Карточка не найдена'))
     .then((card) => {
       if (card.owner.toString() !== req.user._id) {
         throw new ForbiddenError('Нельзя удалять чужие карточки');
       }
-      return res.status(200).send([]);
+      return cards.findByIdAndRemove(req.params.cardId)
+        .then(() => res.status(200).send([]))
+        .catch((e) => next(e));
     })
     .catch((e) => {
       if (e instanceof mongoose.Error.CastError) {
-        return next(new NotFoundError('не корректный id'));
+        return next(new BadRequestError('не корректный id'));
       }
       return next(e);
     });
